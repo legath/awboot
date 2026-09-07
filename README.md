@@ -24,6 +24,13 @@ This it not needed for writing to an SD card.
 The script uploads the freshly built `awboot-fel.bin`, kernel, DTB and optional initrd, updates the FEL mailboxes and
 boots the SoC automatically.  
 
+### FEL raw payload:
+Build the FEL variant in raw mode and upload a flat binary. The payload entry point is its load address.
+```
+make VARIANT=fel BOOT_RAW=1 build-fel/awboot-fel.bin
+tools/fel-raw.sh path/to/payload.bin
+```
+
 ### FEL SPI NOR boot:
 ```
 make VARIANT=spi spi-boot.img
@@ -34,11 +41,13 @@ xfel reset
 
 ### FEL SPI NAND boot:
 ```
-make VARIANT=spi spi-boot.img
+make VARIANT=spi BOOT_RAW=1 spi-boot.img
 xfel spi_nand
 xfel spi_nand write 0 spi-boot.img
+xfel spi_nand write 0x80000 payload.bin
 xfel reset
 ```
+The raw loader reads exactly 8 MiB from SPI offset `0x80000`; `spi-boot.img` contains only the SPL.
 
 ### SD Card boot:
 - create an MBR or GPT partition table and a FAT32 partition with an offset of 4MB or more using fdisk.  
@@ -53,6 +62,12 @@ sudo dd if=awboot-boot-sd.bin of=/dev/(your sd device) bs=1024 seek=8
 ```
 - compile (if needed) and copy your `.dtb` file to the FAT partition.
 - copy zImage to the FAT partition.
+
+For a raw payload, build with `BOOT_RAW=1` and copy `payload.bin` to the FAT partition:
+```
+make VARIANT=sdmmc BOOT_RAW=1 build-sdmmc/awboot-boot.bin
+```
+The payload is loaded at `CONFIG_RAW_LOAD_ADDR` and started directly.
 
 ### Linux kernel:
 WIP kernel from here: https://github.com/smaeul/linux/tree/d1/all

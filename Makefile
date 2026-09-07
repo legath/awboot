@@ -51,6 +51,7 @@ endif
 
 DTB ?= sun8i-t113-mangopi-dual.dtb
 KERNEL ?= zImage
+BOOT_RAW ?= 0
 
 all: git begin build mkboot
 
@@ -64,6 +65,9 @@ build_revision:
 
 .PHONY: tools git begin build mkboot clean format
 .SILENT:
+
+.PHONY: FORCE
+FORCE:
 
 git:
 	cp -f tools/hooks/* .git/hooks/
@@ -113,11 +117,13 @@ $$($(1)_OBJ_DIR)/%.o : %.S
 
 $$($(1)_OBJS): $$($(1)_OBJ_DIR)/board.h
 
-$$($(1)_OBJ_DIR)/board.h: board.h
+$$($(1)_OBJ_DIR)/board.h: board.h FORCE
 	echo "  GEN   $$@"
 	mkdir -p $$(@D)
-	cp $$< $$@
-	$(foreach opt,$(2),sed -i "s/^#define $(word 1,$(subst =, ,$(opt))).*/#define $(word 1,$(subst =, ,$(opt))) $(word 2,$(subst =, ,$(opt)))/" $$@;)
+	cp $$< $$@.tmp
+	$(foreach opt,$(2),sed -i "s/^#define $(word 1,$(subst =, ,$(opt))).*/#define $(word 1,$(subst =, ,$(opt))) $(word 2,$(subst =, ,$(opt)))/" $$@.tmp;)
+	cmp -s $$@.tmp $$@ || cp $$@.tmp $$@
+	rm -f $$@.tmp
 
 clean::
 	rm -rf $$($(1)_OBJ_DIR)
@@ -128,26 +134,26 @@ endef
 
 # build image with no storage support
 ifneq ($(filter fel,$(BUILD_VARIANTS)),)
-$(eval $(call REGISTER_VARIANT,fel,CONFIG_BOOT_SPINAND=0 CONFIG_BOOT_SDCARD=0 CONFIG_BOOT_MMC=0))
+$(eval $(call REGISTER_VARIANT,fel,CONFIG_BOOT_SPINAND=0 CONFIG_BOOT_SDCARD=0 CONFIG_BOOT_MMC=0 CONFIG_BOOT_RAW=$(BOOT_RAW)))
 endif
 
 ifneq ($(filter spi,$(BUILD_VARIANTS)),)
-$(eval $(call REGISTER_VARIANT,spi,CONFIG_BOOT_SPINAND=1 CONFIG_BOOT_SDCARD=0 CONFIG_BOOT_MMC=0))
+$(eval $(call REGISTER_VARIANT,spi,CONFIG_BOOT_SPINAND=1 CONFIG_BOOT_SDCARD=0 CONFIG_BOOT_MMC=0 CONFIG_BOOT_RAW=$(BOOT_RAW)))
 endif
 
 # build sd/mmc only image without spi
 ifneq ($(filter sdmmc,$(BUILD_VARIANTS)),)
-$(eval $(call REGISTER_VARIANT,sdmmc,CONFIG_BOOT_SPINAND=0 CONFIG_BOOT_SDCARD=1 CONFIG_BOOT_MMC=1))
+$(eval $(call REGISTER_VARIANT,sdmmc,CONFIG_BOOT_SPINAND=0 CONFIG_BOOT_SDCARD=1 CONFIG_BOOT_MMC=1 CONFIG_BOOT_RAW=$(BOOT_RAW)))
 endif
 
 # build emmc only image without spi
 ifneq ($(filter emmc,$(BUILD_VARIANTS)),)
-$(eval $(call REGISTER_VARIANT,emmc,CONFIG_BOOT_SPINAND=0 CONFIG_BOOT_SDCARD=0 CONFIG_BOOT_MMC=1))
+$(eval $(call REGISTER_VARIANT,emmc,CONFIG_BOOT_SPINAND=0 CONFIG_BOOT_SDCARD=0 CONFIG_BOOT_MMC=1 CONFIG_BOOT_RAW=$(BOOT_RAW)))
 endif
 
 # build image with everything
 ifneq ($(filter all,$(BUILD_VARIANTS)),)
-$(eval $(call REGISTER_VARIANT,all,CONFIG_BOOT_SPINAND=1 CONFIG_BOOT_SDCARD=1 CONFIG_BOOT_MMC=1))
+$(eval $(call REGISTER_VARIANT,all,CONFIG_BOOT_SPINAND=1 CONFIG_BOOT_SDCARD=1 CONFIG_BOOT_MMC=1 CONFIG_BOOT_RAW=$(BOOT_RAW)))
 endif
 
 clean::

@@ -56,6 +56,7 @@ typedef struct {
 	char *filename;
 	char *of_filename;
 	char *initrd_filename;
+	bool raw;
 } image_info_t;
 
 /* Linux zImage Header */

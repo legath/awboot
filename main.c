@@ -101,11 +101,17 @@ image_info_t image;
 static char   kernel_filename[MAX_FILENAME_SIZE]  = CONFIG_KERNEL_FILENAME;
 static char   dtb_filename[MAX_FILENAME_SIZE]	   = CONFIG_DTB_FILENAME;
 static char   initrd_filename[MAX_FILENAME_SIZE] = CONFIG_INITRD_FILENAME;
+static char   raw_filename[MAX_FILENAME_SIZE]	   = CONFIG_RAW_FILENAME;
 
 static char cmd_line[128] = {0};
 
-static int boot_image_setup(unsigned char *addr, unsigned int *entry)
+static int boot_image_setup(unsigned char *addr, bool raw, unsigned int *entry)
 {
+	if (raw) {
+		*entry = (unsigned int)(uintptr_t)addr;
+		return 0;
+	}
+
 	linux_zimage_header_t *zimage_header = (linux_zimage_header_t *)addr;
 
 	if (zimage_header->magic == LINUX_ZIMAGE_MAGIC) {
@@ -169,9 +175,12 @@ int main(void)
 	image.filename		   = kernel_filename;
 	image.of_filename	   = dtb_filename;
 	image.initrd_filename = initrd_filename;
+	image.raw		   = CONFIG_BOOT_RAW;
 
-	image.dtb_dest	  = (u8 *)(uintptr_t)(dram_get_top() - CONFIG_DTB_GUARD_SIZE);
-	image.kernel_dest = (u8 *)(uintptr_t)CONFIG_KERNEL_LOAD_ADDR;
+	image.dtb_dest	  = image.raw ? NULL : (u8 *)(uintptr_t)(dram_get_top() - CONFIG_DTB_GUARD_SIZE);
+	image.kernel_dest = (u8 *)(uintptr_t)(image.raw ? CONFIG_RAW_LOAD_ADDR : CONFIG_KERNEL_LOAD_ADDR);
+	if (image.raw)
+		image.filename = raw_filename;
 
 // Normal media boot
 #if CONFIG_BOOT_SDCARD || CONFIG_BOOT_MMC
@@ -259,7 +268,7 @@ int main(void)
 	// The kernel will reset WDG
 	sunxi_wdg_set(3);
 
-	if (boot_image_setup((unsigned char *)image.kernel_dest, &entry_point) != 0) {
+	if (boot_image_setup((unsigned char *)image.kernel_dest, image.raw, &entry_point) != 0) {
 		fatal("boot setup failed\r\n");
 	}
 
@@ -267,7 +276,7 @@ int main(void)
 	cmd_line[0] = '\0'; 
 #endif
 
-	if (strlen(cmd_line) > 0) {
+	if (!image.raw && strlen(cmd_line) > 0) {
 		debug("BOOT: args %s\r\n", cmd_line);
 		if (fdt_update_bootargs(image.dtb_dest, cmd_line)) {
 			fatal("BOOT: Failed to set boot args\r\n");
@@ -278,6 +287,9 @@ int main(void)
 	if (memory_size <= CONFIG_PSCI_DRAM_RESERVE) {
 		fatal("BOOT: invalid memory size %" PRIu32 "\r\n", memory_size);
 	}
+	if (image.raw)
+		goto handoff;
+
 	if (fdt_update_memory(image.dtb_dest, SDRAM_BASE, usable_memory_size)) {
 		fatal("BOOT: Failed to set memory size\r\n");
 	} else {
@@ -321,7 +333,8 @@ int main(void)
 		image.initrd_dest = NULL;
 	}
 
-	info("booting linux...\r\n");
+handoff:
+	info("booting %s...\r\n", image.raw ? "raw payload" : "linux");
 	board_set_led(LED_BOARD, 0);
 
 	arm32_mmu_disable();
@@ -330,7 +343,8 @@ int main(void)
 	arm32_interrupt_disable();
 
 	kernel_entry = (void (*)(int, int, unsigned int))entry_point;
-	boot_linux_psci(kernel_entry, ~0UL, (unsigned int)image.dtb_dest);
+	boot_linux_psci(kernel_entry, image.raw ? 0U : ~0UL,
+				image.raw ? 0U : (unsigned int)image.dtb_dest);
 	fatal("PSCI: boot_linux_psci returned unexpectedly\r\n");
 
 	return 0;

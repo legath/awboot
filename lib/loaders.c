@@ -172,6 +172,15 @@ int load_sdmmc(image_info_t *image)
 {
 	int ret;
 
+#if CONFIG_BOOT_RAW
+	info("FATFS: read %s addr=%x\r\n", image->filename, (unsigned int)image->kernel_dest);
+	ret = read_file(image->filename, image->kernel_dest);
+	if (ret <= 0)
+		return ret;
+	image->kernel_size = (u32)ret;
+	return 0;
+#endif
+
 #if LOG_LEVEL >= LOG_DEBUG
 	u32 start;
 	start = time_ms();
@@ -210,6 +219,24 @@ int load_sdmmc(image_info_t *image)
 #if CONFIG_BOOT_SPINAND
 int load_spi_nand(sunxi_spi_t *spi, image_info_t *image)
 {
+#if CONFIG_BOOT_RAW
+	uint64_t start, time;
+	uint64_t raw_end = (uint64_t)(uintptr_t)image->kernel_dest + CONFIG_RAW_SIZE;
+
+	if (CONFIG_RAW_SIZE == 0U || (uint64_t)(uintptr_t)image->kernel_dest < SDRAM_BASE ||
+		raw_end < (uint64_t)(uintptr_t)image->kernel_dest || raw_end > dram_get_top())
+		return -1;
+	if (spi_nand_detect(spi) != 0)
+		return -1;
+
+	start = time_us();
+	spi_nand_read(spi, image->kernel_dest, CONFIG_RAW_FLASH_ADDR, CONFIG_RAW_SIZE);
+	time = time_us() - start;
+	info("SPI-NAND: read raw image of size %u at %.2fMB/S\r\n", CONFIG_RAW_SIZE,
+		 (f32)(CONFIG_RAW_SIZE / time));
+	image->kernel_size = CONFIG_RAW_SIZE;
+	return 0;
+#else
 	linux_zimage_header_t *hdr;
 	unsigned int		   size;
 	uint64_t			   start, time;
@@ -248,5 +275,6 @@ int load_spi_nand(sunxi_spi_t *spi, image_info_t *image)
 	info("SPI-NAND: read Image of size %u at %.2fMB/S\r\n", size, (f32)(size / time));
 
 	return 0;
+#endif
 }
 #endif

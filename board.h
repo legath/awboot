@@ -8,6 +8,7 @@
 
 #define CONFIG_KERNEL_FILENAME "zImage"
 #define CONFIG_DTB_FILENAME	   "sun8i-t113-mangopi-dual.dtb"
+#define CONFIG_RAW_FILENAME	   "payload.bin"
 #ifndef CONFIG_INITRD_FILENAME
 #define CONFIG_INITRD_FILENAME ""
 #endif
@@ -21,6 +22,9 @@
 #define CONFIG_INITRAMFS_MAX_SIZE   MB(25)
 
 #define CONFIG_KERNEL_LOAD_ADDR	    (SDRAM_BASE + MB(32))
+#define CONFIG_RAW_LOAD_ADDR	       CONFIG_KERNEL_LOAD_ADDR
+#define CONFIG_RAW_SIZE		       MB(8)
+#define CONFIG_RAW_FLASH_ADDR	       (256 * 2048)
 #define CONFIG_DTB_GUARD_SIZE	      MB(1)
 
 #define CONFIG_INITRD_ALIGNMENT	  64U
@@ -40,6 +44,7 @@
 #define CONFIG_BOOT_SPINAND 0
 #define CONFIG_BOOT_SDCARD	0
 #define CONFIG_BOOT_MMC		1
+#define CONFIG_BOOT_RAW		0
 
 #define CONFIG_FATFS_CACHE_SIZE		 36 // (unit: 512B sectors, multiples of 8 to match FAT's 4KB)
 #define CONFIG_SDMMC_SPEED_TEST_SIZE 2048 // (unit: 512B sectors)
