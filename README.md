@@ -39,12 +39,12 @@ xfel spinor write 0 spi-boot.img
 xfel reset
 ```
 
-### FEL SPI NAND boot:
+### FEL SPI NOR boot:
 ```
 make VARIANT=spi BOOT_RAW=1 spi-boot.img
-xfel spi_nand
-xfel spi_nand write 0 spi-boot.img
-xfel spi_nand write 0x80000 payload.bin
+xfel spinor
+xfel spinor write 0 spi-boot.img
+xfel spinor write 0x80000 payload.bin
 xfel reset
 ```
 The raw loader reads exactly 8 MiB from SPI offset `0x80000`; `spi-boot.img` contains only the SPL.

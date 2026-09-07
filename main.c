@@ -181,6 +181,9 @@ int main(void)
 	image.kernel_dest = (u8 *)(uintptr_t)(image.raw ? CONFIG_RAW_LOAD_ADDR : CONFIG_KERNEL_LOAD_ADDR);
 	if (image.raw)
 		image.filename = raw_filename;
+	info("BOOT: mode=%s, payload=%s, load address=0x%08" PRIx32 "\r\n",
+		 image.raw ? "raw" : "linux", image.filename,
+		 (uint32_t)(uintptr_t)image.kernel_dest);
 
 // Normal media boot
 #if CONFIG_BOOT_SDCARD || CONFIG_BOOT_MMC
@@ -225,6 +228,7 @@ int main(void)
 
 #if CONFIG_BOOT_SDCARD || CONFIG_BOOT_MMC
 	if (sd_boot_ready) {
+		info("BOOT: loading from SD/MMC\r\n");
 #if CONFIG_BOOT_SPINAND
 		if (load_sdmmc(&image) != 0) {
 			unmount_sdmmc();
@@ -251,6 +255,7 @@ int main(void)
 		}
 		dma_init();
 		dma_test();
+		info("BOOT: loading from %s\r\n", image.raw ? "SPI-NOR" : "SPI-NAND");
 		debug("SPI: init\r\n");
 		if (sunxi_spi_init(&sunxi_spi0) != 0) {
 			fatal("SPI: init failed\r\n");
@@ -271,6 +276,8 @@ int main(void)
 	if (boot_image_setup((unsigned char *)image.kernel_dest, image.raw, &entry_point) != 0) {
 		fatal("boot setup failed\r\n");
 	}
+	info("BOOT: image loaded, size=%" PRIu32 " bytes, entry=0x%08" PRIx32 "\r\n",
+		 image.kernel_size, entry_point);
 
 #if !CONFIG_BOOT_SPINAND && !CONFIG_BOOT_SDCARD && !CONFIG_BOOT_MMC
 	cmd_line[0] = '\0'; 
@@ -334,7 +341,8 @@ int main(void)
 	}
 
 handoff:
-	info("booting %s...\r\n", image.raw ? "raw payload" : "linux");
+	info("BOOT: handoff to %s at 0x%08" PRIx32 "\r\n", image.raw ? "raw payload" : "linux",
+		 entry_point);
 	board_set_led(LED_BOARD, 0);
 
 	arm32_mmu_disable();

@@ -824,3 +824,34 @@ uint32_t spi_nand_read(sunxi_spi_t *spi, uint8_t *buf, uint32_t addr, uint32_t r
 	}
 	return len;
 }
+
+uint32_t spi_nor_read(sunxi_spi_t *spi, uint8_t *buf, uint32_t addr, uint32_t rxlen)
+{
+	uint8_t tx[4];
+	uint32_t total = 0;
+
+	if (rxlen == 0U)
+		return 0;
+
+	tx[0] = OPCODE_READ;
+	tx[1] = (uint8_t)(addr >> 16);
+	tx[2] = (uint8_t)(addr >> 8);
+	tx[3] = (uint8_t)addr;
+
+	while (rxlen > 0U) {
+		uint32_t chunk = rxlen > 0x100000U ? 0x100000U : rxlen;
+
+		if (spi_transfer(spi, SPI_IO_SINGLE, tx, sizeof(tx), buf, chunk) < 0)
+			return total;
+
+		addr += chunk;
+		buf += chunk;
+		rxlen -= chunk;
+		total += chunk;
+		tx[1] = (uint8_t)(addr >> 16);
+		tx[2] = (uint8_t)(addr >> 8);
+		tx[3] = (uint8_t)addr;
+	}
+
+	return total;
+}

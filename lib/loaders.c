@@ -221,19 +221,28 @@ int load_spi_nand(sunxi_spi_t *spi, image_info_t *image)
 {
 #if CONFIG_BOOT_RAW
 	uint64_t start, time;
+	uint32_t bytes_read;
 	uint64_t raw_end = (uint64_t)(uintptr_t)image->kernel_dest + CONFIG_RAW_SIZE;
 
+	info("SPI-NAND: raw slot 0x%08x -> RAM 0x%08x, size %u bytes\r\n",
+		 CONFIG_RAW_FLASH_ADDR, (uint32_t)(uintptr_t)image->kernel_dest, CONFIG_RAW_SIZE);
 	if (CONFIG_RAW_SIZE == 0U || (uint64_t)(uintptr_t)image->kernel_dest < SDRAM_BASE ||
 		raw_end < (uint64_t)(uintptr_t)image->kernel_dest || raw_end > dram_get_top())
+	{
+		error("SPI-NAND: raw destination range is outside SDRAM\r\n");
 		return -1;
-	if (spi_nand_detect(spi) != 0)
-		return -1;
+	}
+	info("SPI-NOR: reading raw slot\r\n");
 
 	start = time_us();
-	spi_nand_read(spi, image->kernel_dest, CONFIG_RAW_FLASH_ADDR, CONFIG_RAW_SIZE);
+	bytes_read = spi_nor_read(spi, image->kernel_dest, CONFIG_RAW_FLASH_ADDR, CONFIG_RAW_SIZE);
 	time = time_us() - start;
-	info("SPI-NAND: read raw image of size %u at %.2fMB/S\r\n", CONFIG_RAW_SIZE,
-		 (f32)(CONFIG_RAW_SIZE / time));
+	if (bytes_read != CONFIG_RAW_SIZE) {
+		error("SPI-NOR: raw read incomplete, got %u of %u bytes\r\n", bytes_read, CONFIG_RAW_SIZE);
+		return -1;
+	}
+	info("SPI-NOR: raw read complete, %u bytes in %" PRIu64 " us (%.2f MB/s)\r\n",
+		 bytes_read, time, time ? (f32)bytes_read / (f32)time : 0.0f);
 	image->kernel_size = CONFIG_RAW_SIZE;
 	return 0;
 #else
