@@ -29,6 +29,7 @@
 
 memcpy:
 	.fnstart
+	.cantunwind
 		mov	ip, r0
 		cmp	r2, #16
 		blt     4f	@ Have less than 16 bytes to copy

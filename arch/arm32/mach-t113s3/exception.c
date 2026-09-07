@@ -44,17 +44,17 @@ void arm32_fault_stub(const char *reason, struct arm_regs_t *regs)
 	if (!reason || !regs)
 		return;
 
-	error("%s fault: pc=%08lx lr=%08lx spsr=%08lx\r\n", reason, regs->pc, regs->lr, regs->cpsr);
+	error("%s fault: pc=%08x lr=%08x spsr=%08x\r\n", reason, regs->pc, regs->lr, regs->cpsr);
 }
 
 static void show_regs(struct arm_regs_t *regs)
 {
 	int i;
 
-	error("pc : [<%08lx>] lr : [<%08lx>] cpsr: %08lx\r\n", regs->pc, regs->lr, regs->cpsr);
-	error("sp : %08lx esp : %08lx\r\n", regs->sp, regs->esp);
+	error("pc : [<%08x>] lr : [<%08x>] cpsr: %08x\r\n", regs->pc, regs->lr, regs->cpsr);
+	error("sp : %08x esp : %08x\r\n", regs->sp, regs->esp);
 	for (i = 12; i >= 0; i--)
-		error("r%-2d: %08lx\r\n", i, regs->r[i]);
+		error("r%-2d: %08x\r\n", i, regs->r[i]);
 	error("\r\n");
 }
 

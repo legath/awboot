@@ -1,6 +1,6 @@
 # Target
 TARGET := awboot
-CROSS_COMPILE ?= arm-none-eabi
+CROSS_COMPILE ?= arm-none-linux-gnueabihf
 
 # Log level defaults to info
 LOG_LEVEL ?= 30

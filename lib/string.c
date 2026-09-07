@@ -6,6 +6,12 @@
 #include "string.h"
 #include "common.h"
 
+int raise(int signal)
+{
+	(void)signal;
+	return 0;
+}
+
 void *memset(void *dst, int val, size_t len)
 {
 	char *d = (char *)dst;
